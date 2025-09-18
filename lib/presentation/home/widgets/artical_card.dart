@@ -22,7 +22,7 @@ class ArticleCard extends StatelessWidget {
     final double scale = MediaQuery.of(context).size.width / 375;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 8 * scale),
+      margin: EdgeInsets.symmetric(horizontal: 0, vertical: 8 * scale),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12 * scale),
@@ -80,7 +80,14 @@ class ArticleCard extends StatelessWidget {
                       // Example source logo placeholder
                       SizedBox(width: 6 * scale),
 
-                      Text(source, style: AppTextStyles.source(context)),
+                      Expanded(
+                        child: Text(
+                          source,
+                          style: AppTextStyles.source(context),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       SizedBox(width: 8 * scale),
 
                       Icon(
