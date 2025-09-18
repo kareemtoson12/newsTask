@@ -17,6 +17,11 @@ class DomainRepoImpl implements DomainRepo {
     return DomainRepoImpl._(client);
   }
 
+  // Synchronous constructor for DI when client is already provided
+  factory DomainRepoImpl.fromClient(AppServiceClient client) {
+    return DomainRepoImpl._(client);
+  }
+
   @override
   Future<ApiResult<NewsResponse>> getTopHeadlines({
     required String country,

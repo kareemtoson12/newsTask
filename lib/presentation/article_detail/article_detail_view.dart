@@ -3,10 +3,31 @@ import 'package:flutter/foundation.dart';
 import 'package:news/data/models/news_response.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:news/presentation/article_detail/cubit/article_detail_cubit.dart';
+import 'package:news/presentation/article_detail/cubit/article_detail_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ArticleDetailView extends StatelessWidget {
+class ArticleDetailView extends StatefulWidget {
   final Article article;
   const ArticleDetailView({super.key, required this.article});
+  @override
+  State<ArticleDetailView> createState() => _ArticleDetailViewState();
+}
+
+class _ArticleDetailViewState extends State<ArticleDetailView> {
+  late final ArticleDetailCubit _cubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit = context.read<ArticleDetailCubit>();
+  }
+
+  @override
+  void dispose() {
+    _cubit.close();
+    super.dispose();
+  }
 
   String _normalizeUrl(String raw) {
     // Remove line breaks and trim
@@ -28,7 +49,7 @@ class ArticleDetailView extends StatelessWidget {
   }
 
   Future<void> _openUrl(BuildContext context) async {
-    final url = article.url;
+    final url = widget.article.url;
     if (url == null || url.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No URL available for this article')),
@@ -88,17 +109,17 @@ class ArticleDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(article.source?.name ?? 'Article')),
+      appBar: AppBar(title: Text(widget.article.source?.name ?? 'Article')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_isValidHttpUrl(article.urlToImage))
+            if (_isValidHttpUrl(widget.article.urlToImage))
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  _normalizeUrl(article.urlToImage!),
+                  _normalizeUrl(widget.article.urlToImage!),
                   fit: BoxFit.cover,
                   width: double.infinity,
                   errorBuilder: (context, error, stackTrace) {
@@ -125,28 +146,54 @@ class ArticleDetailView extends StatelessWidget {
               ),
             const SizedBox(height: 16),
             Text(
-              article.title ?? '',
+              widget.article.title ?? '',
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(
-              (article.description?.isNotEmpty == true)
-                  ? article.description!
-                  : (article.content ?? ''),
+              (widget.article.description?.isNotEmpty == true)
+                  ? widget.article.description!
+                  : (widget.article.content ?? ''),
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _openUrl(context),
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Open full article'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-              ),
+            BlocConsumer<ArticleDetailCubit, ArticleDetailState>(
+              listener: (context, state) {
+                if (state is ArticleDetailError) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.message)));
+                }
+              },
+              builder: (context, state) {
+                final isLoading = state is ArticleDetailLaunching;
+                return Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: isLoading
+                            ? null
+                            : () => _cubit.openUrl(widget.article.url),
+                        icon: const Icon(Icons.open_in_new),
+                        label: Text(
+                          isLoading ? 'Opening...' : 'Open full article',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (isLoading) ...[
+                      const SizedBox(height: 12),
+                      const Center(
+                        child: CircularProgressIndicator(color: Colors.blue),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
           ],
         ),
